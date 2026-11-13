@@ -1,8 +1,13 @@
 package com.stockflow.stockflow_backend.Service.Impl;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -276,4 +281,192 @@ public class ProductServiceImpl implements ProductService {
 		            lowStockProducts
 		    );
 		}
+
+@Override
+
+@Transactional
+
+public Page<ProductResponse> getAllProducts(
+        int page,
+        int size,
+        String sortBy,
+        String direction) {
+
+    // Validate page number and page size
+    if (page < 0) {
+        throw new IllegalArgumentException(
+                "Page number cannot be negative");
+    }
+
+    if (size < 1 || size > 100) {
+        throw new IllegalArgumentException(
+                "Page size must be between 1 and 100");
+    }
+
+    // Allow only valid Product entity fields for sorting
+    Set<String> allowedFields = Set.of(
+            "name",
+            "sku",
+            "quantity",
+            "costPrice",
+            "sellingPrice",
+            "createdAt",
+            "updatedAt"
+    );
+
+    if (sortBy == null || !allowedFields.contains(sortBy)) {
+        throw new IllegalArgumentException(
+                "Invalid sorting field");
+    }
+
+    // Validate sorting direction
+    Sort.Direction sortDirection;
+
+    try {
+        sortDirection = Sort.Direction.fromString(direction);
+    } catch (IllegalArgumentException | NullPointerException e) {
+        throw new IllegalArgumentException(
+                "Direction must be asc or desc");
+    }
+
+    // Get logged-in user's email
+    String email = SecurityContextHolder.getContext()
+            .getAuthentication().getName();
+
+    // Find logged-in user
+    AppUser user = userRepository.findByEmail(email)
+            .orElseThrow(() ->
+                    new RuntimeException("User not found"));
+
+    // Get organization ID
+    Long organizationId = user.getOrganization().getId();
+
+    // Create pagination and sorting request
+    Pageable pageable = PageRequest.of(
+            page,
+            size,
+            Sort.by(sortDirection, sortBy)
+    );
+
+    // Fetch only this organization's products
+    Page<Product> products =
+            productRepository.findByOrganizationId(
+                    organizationId,
+                    pageable
+            );
+
+    // Convert entities into response DTOs
+    return products.map(product -> {
+        ProductResponse response = new ProductResponse();
+
+        response.setId(product.getId());
+        response.setName(product.getName());
+        response.setSku(product.getSku());
+        response.setDescription(product.getDescription());
+        response.setQuantity(product.getQuantity());
+        response.setCostPrice(product.getCostPrice());
+        response.setSellingPrice(product.getSellingPrice());
+        response.setLowStockThreshold(
+                product.getLowStockThreshold());
+        response.setCreatedAt(product.getCreatedAt());
+        response.setUpdatedAt(product.getUpdatedAt());
+
+        return response;
+    });
+}
+
+@Override
+@Transactional
+public Page<ProductResponse> searchProducts(
+        String keyword,
+        int page,
+        int size,
+        String sortBy,
+        String direction) {
+
+    // Validate pagination
+    if (page < 0) {
+        throw new IllegalArgumentException(
+                "Page number cannot be negative");
+    }
+
+    if (size < 1 || size > 100) {
+        throw new IllegalArgumentException(
+                "Page size must be between 1 and 100");
+    }
+
+    // Validate sorting fields
+    Set<String> allowedFields = Set.of(
+            "name",
+            "sku",
+            "quantity",
+            "costPrice",
+            "sellingPrice",
+            "createdAt",
+            "updatedAt"
+    );
+
+    if (sortBy == null || !allowedFields.contains(sortBy)) {
+        throw new IllegalArgumentException(
+                "Invalid sorting field");
+    }
+
+    // Validate sorting direction
+    Sort.Direction sortDirection;
+
+    try {
+        sortDirection = Sort.Direction.fromString(direction);
+    } catch (IllegalArgumentException | NullPointerException e) {
+        throw new IllegalArgumentException(
+                "Direction must be asc or desc");
+    }
+
+    // Get logged-in user
+    String email = SecurityContextHolder.getContext()
+            .getAuthentication().getName();
+
+    AppUser user = userRepository.findByEmail(email)
+            .orElseThrow(() ->
+                    new RuntimeException("User not found"));
+
+    Long organizationId = user.getOrganization().getId();
+
+    // Prepare search keyword
+    String searchKeyword = keyword == null ? "" : keyword.trim();
+
+    // Create pagination and sorting
+    Pageable pageable = PageRequest.of(
+            page,
+            size,
+            Sort.by(sortDirection, sortBy)
+    );
+
+    // Search only within the logged-in user's organization
+    Page<Product> products = productRepository.searchProducts(
+            organizationId,
+            searchKeyword,
+            pageable
+    );
+
+    // Convert Product entities into ProductResponse DTOs
+    return products.map(product -> {
+        ProductResponse response = new ProductResponse();
+
+        response.setId(product.getId());
+        response.setName(product.getName());
+        response.setSku(product.getSku());
+        response.setDescription(product.getDescription());
+        response.setQuantity(product.getQuantity());
+        response.setCostPrice(product.getCostPrice());
+        response.setSellingPrice(product.getSellingPrice());
+        response.setLowStockThreshold(
+                product.getLowStockThreshold());
+        response.setCreatedAt(product.getCreatedAt());
+        response.setUpdatedAt(product.getUpdatedAt());
+
+        return response;
+    });
+}
+
+
 }

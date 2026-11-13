@@ -1,7 +1,9 @@
+
 package com.stockflow.stockflow_backend.Controller;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.stockflow.stockflow_backend.Service.ProductService;
@@ -23,64 +26,126 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/products")
 public class ProductController {
-	 private final ProductService productService;
 
-	    public ProductController(ProductService productService) {
-	        this.productService = productService;
-	    }
+    private final ProductService productService;
 
-	    // Create Product
-	    @PostMapping
-	    public ResponseEntity<ProductResponse> createProduct(
-	            @Valid @RequestBody ProductRequest request) {
+    public ProductController(ProductService productService) {
+        this.productService = productService;
+    }
 
-	        ProductResponse response =
-	                productService.createProduct(request);
+    // Create Product
+    @PostMapping
+    public ResponseEntity<ProductResponse> createProduct(
+            @Valid @RequestBody ProductRequest request) {
 
-	        return new ResponseEntity<>(
-	                response, HttpStatus.CREATED);
-	    }
-	 // Get All Products
-	    @GetMapping
-	    public ResponseEntity<List<ProductResponse>> getAllProducts() {
+        ProductResponse response =
+                productService.createProduct(request);
 
-	        List<ProductResponse> products =
-	                productService.getAllProducts();
+        return new ResponseEntity<>(
+                response, HttpStatus.CREATED);
+    }
 
-	        return ResponseEntity.ok(products);
-	    }
-	    @GetMapping("/{id}")
-	    public ResponseEntity<ProductResponse> getProductById(
-	            @PathVariable Long id) {
+    // Get All Products (existing endpoint)
+    @GetMapping
+    public ResponseEntity<List<ProductResponse>> getAllProducts() {
 
-	        ProductResponse product = productService.getProductById(id);
+        List<ProductResponse> products =
+                productService.getAllProducts();
 
-	        return ResponseEntity.ok(product);
-	    }
-	    @PutMapping("/{id}")
-	    public ResponseEntity<ProductResponse> updateProduct(
-	            @PathVariable Long id,
-	            @Valid @RequestBody ProductRequest request) {
+        return ResponseEntity.ok(products);
+    }
 
-	        ProductResponse updatedProduct =
-	                productService.updateProduct(id, request);
+    // Get Products with Pagination and Sorting
+    @GetMapping("/paged")
+    public ResponseEntity<Page<ProductResponse>> getAllProductsPaged(
 
-	        return ResponseEntity.ok(updatedProduct);
-	    }
-	    @DeleteMapping("/{id}")
-	    public ResponseEntity<String> deleteProduct(
-	            @PathVariable Long id) {
+            @RequestParam(defaultValue = "0") int page,
 
-	        productService.deleteProduct(id);
+            @RequestParam(defaultValue = "5") int size,
 
-	        return ResponseEntity.ok("Product deleted successfully");
-	    }
-	    @GetMapping("/dashboard")
-	    public ResponseEntity<DashboardResponse> getDashboard() {
+            @RequestParam(defaultValue = "name") String sortBy,
 
-	        DashboardResponse dashboard =
-	                productService.getDashboard();
+            @RequestParam(defaultValue = "asc") String direction) {
 
-	        return ResponseEntity.ok(dashboard);
-	    }
+        Page<ProductResponse> products =
+                productService.getAllProducts(
+                        page,
+                        size,
+                        sortBy,
+                        direction
+                );
+
+        return ResponseEntity.ok(products);
+    }
+
+    // Get Product By ID
+    @GetMapping("/{id}")
+    public ResponseEntity<ProductResponse> getProductById(
+            @PathVariable Long id) {
+
+        ProductResponse product =
+                productService.getProductById(id);
+
+        return ResponseEntity.ok(product);
+    }
+
+    // Update Product
+    @PutMapping("/{id}")
+    public ResponseEntity<ProductResponse> updateProduct(
+            @PathVariable Long id,
+            @Valid @RequestBody ProductRequest request) {
+
+        ProductResponse updatedProduct =
+                productService.updateProduct(id, request);
+
+        return ResponseEntity.ok(updatedProduct);
+    }
+
+    // Delete Product
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteProduct(
+            @PathVariable Long id) {
+
+        productService.deleteProduct(id);
+
+        return ResponseEntity.ok(
+                "Product deleted successfully");
+    }
+
+    // Dashboard
+    @GetMapping("/dashboard")
+    public ResponseEntity<DashboardResponse> getDashboard() {
+
+        DashboardResponse dashboard =
+                productService.getDashboard();
+
+        return ResponseEntity.ok(dashboard);
+    }
+
+    // Search Products with Pagination and Sorting
+    @GetMapping("/search")
+    public ResponseEntity<Page<ProductResponse>> searchProducts(
+
+            @RequestParam(defaultValue = "") String keyword,
+
+            @RequestParam(defaultValue = "0") int page,
+
+            @RequestParam(defaultValue = "5") int size,
+
+            @RequestParam(defaultValue = "name") String sortBy,
+
+            @RequestParam(defaultValue = "asc") String direction) {
+
+        Page<ProductResponse> products =
+                productService.searchProducts(
+                        keyword,
+                        page,
+                        size,
+                        sortBy,
+                        direction
+                );
+
+        return ResponseEntity.ok(products);
+    }
+
 }
